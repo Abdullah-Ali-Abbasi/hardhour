@@ -52,14 +52,6 @@ jobs:
           echo "Deployment package contents:"
           ls -la deploy/
       
-      - name: Create directory on cPanel
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          script: mkdir -p /home/qptvogx6pfzq/reactive-resume
-      
       - name: Deploy to cPanel via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
