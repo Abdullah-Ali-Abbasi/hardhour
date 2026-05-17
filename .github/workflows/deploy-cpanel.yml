@@ -35,60 +35,17 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
       
-      - name: Debug - Find all build outputs
-        run: |
-          echo "=== Current directory contents ==="
-          ls -la
-          
-          echo "=== Apps directory (if exists) ==="
-          if [ -d "apps" ]; then
-            ls -la apps/
-            if [ -d "apps/web" ]; then
-              echo "=== apps/web contents ==="
-              ls -la apps/web/
-            fi
-          fi
-          
-          echo "=== Packages directory (if exists) ==="
-          if [ -d "packages" ]; then
-            ls -la packages/
-          fi
-          
-          echo "=== Any dist/build/output directories ==="
-          find . -type d \( -name "dist" -o -name "build" -o -name ".output" -o -name "out" \) 2>/dev/null | head -20
-          
-          echo "=== Build script from package.json ==="
-          grep -A2 '"build"' package.json
-          
-          echo "=== Turbo repo build output (if using turbo) ==="
-          if [ -d "node_modules/.cache/turbo" ]; then
-            ls -la node_modules/.cache/turbo/
-          fi
-      
       - name: Prepare deployment package
         run: |
           mkdir -p deploy
           
-          # Try ALL possible build output locations
-          if [ -d "apps/web/dist" ]; then
-            echo "Found apps/web/dist"
-            cp -r apps/web/dist/* deploy/ 2>/dev/null || cp -r apps/web/dist deploy/
-          elif [ -d "apps/web/.next" ]; then
-            echo "Found apps/web/.next (Next.js build)"
-            cp -r apps/web/.next deploy/
-          elif [ -d ".output" ]; then
-            echo "Found .output"
-            cp -r .output/* deploy/
-          elif [ -d "dist" ]; then
-            echo "Found dist"
-            cp -r dist/* deploy/
-          elif [ -d "build" ]; then
-            echo "Found build"
-            cp -r build/* deploy/
+          # The build output is inside apps/web/.output
+          if [ -d "apps/web/.output" ]; then
+            echo "Found apps/web/.output"
+            cp -r apps/web/.output/* deploy/
           else
-            echo "WARNING: No standard build output found!"
-            echo "Searching for any files modified in last minute..."
-            find . -type f -mmin -5 | head -20
+            echo "ERROR: No build output found!"
+            ls -la apps/web/
             exit 1
           fi
           
