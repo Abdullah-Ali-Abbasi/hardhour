@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -32,11 +35,52 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
       
+      - name: Debug - List files after build
+        run: |
+          echo "=== Current directory ==="
+          ls -la
+          echo "=== Apps directory ==="
+          ls -la apps/ 2>/dev/null || echo "No apps directory"
+          echo "=== Looking for build output ==="
+          find . -type d \( -name "dist" -o -name ".output" -o -name "build" \) 2>/dev/null | head -10
+      
       - name: Prepare deployment package
         run: |
-          mkdir deploy
-          cp -r apps/web/dist deploy/
-          cp package.json pnpm-lock.yaml deploy/
+          mkdir -p deploy
+          
+          # Try different possible build output locations
+          if [ -d "apps/web/dist" ]; then
+            echo "Found apps/web/dist"
+            cp -r apps/web/dist deploy/
+          elif [ -d ".output" ]; then
+            echo "Found .output"
+            cp -r .output deploy/
+          elif [ -d "dist" ]; then
+            echo "Found dist"
+            cp -r dist deploy/
+          else
+            echo "ERROR: No build output found!"
+            exit 1
+          fi
+          
+          # Copy server files if they exist in .output
+          if [ -d ".output/server" ]; then
+            cp -r .output/server deploy/ 2>/dev/null || true
+          fi
+          
+          # Copy package files for reference
+          cp package.json deploy/ 2>/dev/null || true
+          
+          echo "Deployment package contents:"
+          ls -la deploy/
+      
+      - name: Create directory on cPanel
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          script: mkdir -p /home/qptvogx6pfzq/reactive-resume
       
       - name: Deploy to cPanel via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
